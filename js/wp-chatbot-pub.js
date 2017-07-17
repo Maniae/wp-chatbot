@@ -158,6 +158,8 @@ jQuery(document).ready(function ( $ ) {
     var $input = $('#input');
     var $send = $('#send');
 
+    var typingTimeout;
+
     function scrollBottom() {
         jQuery('.chatbot-wrapper .chatbot-inner').scrollTop(jQuery('#wp-chatbot-content').prop("scrollHeight"));
     }
@@ -167,16 +169,27 @@ jQuery(document).ready(function ( $ ) {
         scrollBottom();
     }
     function buildRecieved(message) {
+        hideTyping();
         console.log('recieving: ', message.text);
         $content.append(messenger.buildMessage(message.text, 'bot'));
         scrollBottom();
     }
     function buildRichText(richText) {
+        hideTyping();
         console.log('recieving RichText');
         $content.append(richText);
         scrollBottom();
     }
-
+    function showTyping() {
+        var progressDotsPath = wp_chatbot.pluginUrl + "/assets/img/progress-dots.gif";
+        var typingIndicator = '<div id="typingIndicator"class="message-wrapper bot"><div class="text-wrapper animated fadein"><img src="' + progressDotsPath + '"></div>\n</div>';
+        $content.append(typingIndicator);
+        scrollBottom()
+    }
+    function hideTyping() {
+        clearTimeout(typingTimeout);
+        $('#typingIndicator').remove();
+    }
     function escapeHtml(str) {
       var div = document.createElement('div');
       div.appendChild(document.createTextNode(str));
@@ -197,6 +210,9 @@ jQuery(document).ready(function ( $ ) {
         messenger.send( text );
         $input.val( '' );
 
+        setTimeout(showTyping, 250);
+        typingTimeout = setTimeout(hideTyping, 5000); // Stop typing indicator after timeout
+
         jQuery.ajax({
           url : wp_chatbot.ajax_url,
           type : 'post',
@@ -205,26 +221,32 @@ jQuery(document).ready(function ( $ ) {
             message : text
           },
           success : function( response ) {
+              hideTyping();
 
             if ( $.isArray( response[ 'response' ] )  && response[ 'response'].length > 0 ) {
 
               if ( response[ 'response_code' ] == 'RESPONSE' ) {
 
-                for ( var i in response['response'] ) {
-                    var message = response['response'][i];
+                  for ( var i in response['response'] ) {
+                      setTimeout(function (i) {
+                          var message = response['response'][i];
 
-                    if (message['type'] === 'text') {
-                        // default type
-                        messenger.recieve(message['message']);
-                    } else {
-                        // custom types for rich messages
-                        var richMessage = richParser.buildRichText(message);
-                        // First print the text part in a message
-                        if (richMessage.text) messenger.recieve(richMessage.text);
-                        // Then print the rich part
-                        if (richMessage.richtext) messenger.printRichText(richMessage.richtext)
-                    }
-                }
+                          if (message['type'] === 'text') {
+                              // default type
+                              messenger.recieve(message['message']);
+                          } else {
+                              // custom types for rich messages
+                              var richMessage = richParser.buildRichText(message);
+                              // First print the text part in a message
+                              if (richMessage.text) messenger.recieve(richMessage.text);
+                              // Then print the rich part
+                              if (richMessage.richtext) messenger.printRichText(richMessage.richtext)
+                          }
+                          if (i < response['response'].length - 1) {
+                              showTyping()
+                          }
+                      }, 1000*i, i)
+                  }
 
               } else if ( response[ 'response_code' ] == 'ERROR' ) {
 

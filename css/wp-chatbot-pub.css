@@ -451,3 +451,7 @@
   font-size: 13px;
   color: #007acc;
 }
+
+#typing-indicator {
+  width:30%;
+}

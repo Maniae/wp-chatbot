@@ -100,6 +100,7 @@ class WP_Chatbot_Public {
 		/* Localized JS variables */
 		wp_localize_script( 'wp-chatbot', 'wp_chatbot', array(
 			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'pluginUrl' => plugins_url('', __DIR__),
 		));
 	}
 
